@@ -131,6 +131,10 @@ init_db()
 
 @app.route('/')
 def index():
+    return "App is running. Visit /ui for the interface.", 200
+
+@app.route('/ui')
+def ui():
     try:
         return render_template('index.html')
     except Exception as e:

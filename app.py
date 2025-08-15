@@ -10,7 +10,6 @@ except ImportError:
 import pdfplumber
 import docx2txt
 import numpy as np
-from sentence_transformers import SentenceTransformer, util
 import googleapiclient.discovery
 import spacy
 from spacy.cli import download
@@ -37,8 +36,7 @@ except OSError:
     download(model_name)
     nlp = spacy.load(model_name)
 
-# Load AI Model
-st_model = SentenceTransformer('all-MiniLM-L6-v2')
+# No heavy transformer model – rely on spaCy vectors for similarity
 
 # YouTube API Key (Replace with your own key)
 YOUTUBE_API_KEY = "AIzaSyBoRgw0WE_KzTVNUvH8d4MiTo1zZ2SqKPI"
@@ -89,8 +87,12 @@ def extract_skills(text):
     return list(skills)
 
 def calculate_matching_score(resume_text, job_text):
-    embeddings = st_model.encode([resume_text, job_text], convert_to_tensor=True)
-    return round(float(util.pytorch_cos_sim(embeddings[0], embeddings[1])[0]), 2) * 100
+    # Use spaCy document vector similarity (fast, no heavy deps)
+    # Limit very long texts for performance
+    doc_resume = nlp(resume_text[:100000])
+    doc_job = nlp(job_text[:100000])
+    similarity = doc_resume.similarity(doc_job)
+    return round(float(similarity) * 100, 2)
 
 def fetch_youtube_courses(skill):
     try:

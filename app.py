@@ -16,7 +16,7 @@ import json
 from werkzeug.utils import secure_filename
 import uuid
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder='templates')
 CORS(app)
 
 # Configuration
@@ -131,7 +131,10 @@ init_db()
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    try:
+        return render_template('index.html')
+    except Exception as e:
+        return f"Template rendering error: {str(e)}", 500
 
 @app.route('/health')
 def health():

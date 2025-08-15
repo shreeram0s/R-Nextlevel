@@ -3,7 +3,10 @@ from flask_cors import CORS
 import os
 import sqlite3
 import requests
-import pandas as pd
+try:
+    import pandas as pd
+except ImportError:
+    pd = None
 import pdfplumber
 import docx2txt
 import numpy as np
@@ -228,22 +231,26 @@ def get_analyses():
         user_filter = request.args.get('user_name', '')
         
         conn = sqlite3.connect('analysis_results.db')
+        cursor = conn.cursor()
+        
         if user_filter:
-            df = pd.read_sql_query("SELECT * FROM analysis WHERE user_name = ? ORDER BY created_at DESC", conn, params=(user_filter,))
+            cursor.execute("SELECT * FROM analysis WHERE user_name = ? ORDER BY created_at DESC", (user_filter,))
         else:
-            df = pd.read_sql_query("SELECT * FROM analysis ORDER BY created_at DESC", conn)
+            cursor.execute("SELECT * FROM analysis ORDER BY created_at DESC")
+        
+        rows = cursor.fetchall()
         conn.close()
         
         analyses = []
-        for _, row in df.iterrows():
+        for row in rows:
             analyses.append({
-                'id': row['id'],
-                'user_name': row['user_name'],
-                'resume_skills': row['resume_skills'].split(',') if row['resume_skills'] else [],
-                'job_skills': row['job_skills'].split(',') if row['job_skills'] else [],
-                'missing_skills': row['missing_skills'].split(',') if row['missing_skills'] else [],
-                'matching_score': row['matching_score'],
-                'created_at': row['created_at']
+                'id': row[0],
+                'user_name': row[1],
+                'resume_skills': row[2].split(',') if row[2] else [],
+                'job_skills': row[3].split(',') if row[3] else [],
+                'missing_skills': row[4].split(',') if row[4] else [],
+                'matching_score': row[5],
+                'created_at': row[6]
             })
         
         return jsonify(analyses)

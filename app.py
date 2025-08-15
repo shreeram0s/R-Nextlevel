@@ -12,7 +12,6 @@ import docx2txt
 import numpy as np
 import googleapiclient.discovery
 import spacy
-from spacy.cli import download
 import json
 from werkzeug.utils import secure_filename
 import uuid
@@ -28,13 +27,18 @@ ALLOWED_EXTENSIONS = {'pdf', 'docx', 'txt'}
 # Create uploads directory if it doesn't exist
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
-# Load NLP model
-model_name = "en_core_web_md"
-try:
-    nlp = spacy.load(model_name)
-except OSError:
-    download(model_name)
-    nlp = spacy.load(model_name)
+# Load NLP model without blocking startup on downloads
+def load_nlp_model():
+    try:
+        return spacy.load("en_core_web_md")
+    except Exception:
+        try:
+            return spacy.load("en_core_web_sm")
+        except Exception:
+            print("Warning: spaCy models not available. Falling back to blank English model.")
+            return spacy.blank("en")
+
+nlp = load_nlp_model()
 
 # No heavy transformer model – rely on spaCy vectors for similarity
 
@@ -128,6 +132,14 @@ init_db()
 @app.route('/')
 def index():
     return render_template('index.html')
+
+@app.route('/health')
+def health():
+    try:
+        _ = nlp("ok")
+        return jsonify({"status": "ok"}), 200
+    except Exception as e:
+        return jsonify({"status": "degraded", "error": str(e)}), 200
 
 @app.route('/api/analyze', methods=['POST'])
 def analyze():
